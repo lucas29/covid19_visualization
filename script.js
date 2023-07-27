@@ -26,9 +26,6 @@ let svg2, mapDataPromise;
 
 const colorScale = d3.scaleSequential().interpolator(d3.interpolateOrRd);
 
-const top5Countries = ["US", "China", "United Kingdom", "Japan", "Brazil"];
-const colors = d3.scaleOrdinal(d3.schemeCategory10).domain(top5Countries);
-
 const displayScene = (idx) => {
     const [chartDisplay, mapDisplay] = idx === INDEX_MIN ? ['block', 'none'] : ['none', 'block'];
 
@@ -69,6 +66,9 @@ d3.csv("confirmed.csv").then(data => {
     return acc;
   }, {});
 
+  const allCountries = Object.keys(dataByCountry);
+  const colors = d3.scaleOrdinal(d3.schemeCategory10).domain(allCountries);
+
   const svg = d3.select("#line-chart-container").append("svg").attr("width", WIDTH + MARGIN.left + MARGIN.right).attr("height", HEIGHT + MARGIN.top + MARGIN.bottom).append("g").attr("transform", `translate(${MARGIN.left},${MARGIN.top})`);
 
   // Add X axis
@@ -82,7 +82,7 @@ d3.csv("confirmed.csv").then(data => {
   .domain([0, d3.max(parsedData, function(d) { return +d.cases; })]).range([ HEIGHT, 0 ]);
   svg.append("g").call(d3.axisLeft(y));
 
-  top5Countries.forEach(country => {
+  Object.keys(dataByCountry).forEach(country => {
     const countryData = dataByCountry[country].flatMap(d => Object.entries(d).filter(([key]) => !["Province/State", "Country/Region", "Lat", "Long"].includes(key)).map(([key, value]) => ({
       date: d3.timeParse("%m/%d/%y")(key),
       cases: +value
@@ -103,30 +103,6 @@ d3.csv("confirmed.csv").then(data => {
       .on("mousemove", handleLineMouseMove)
       .on("mouseout", handleLineMouseOut);
   });
-  
-// Add legend for the top 5 countries
-const legend = svg.append('g')
-  .attr('transform', `translate(${MARGIN.left},${MARGIN.top})`);
-
-top5Countries.forEach((country, i) => {
-  const legendEntry = legend.append('g')
-    .attr('transform', `translate(0,${i * 20})`); // Place each legend entry 20px apart
-
-  // Draw a colored rectangle for each country
-  legendEntry.append('rect')
-    .attr('width', 18)
-    .attr('height', 2)
-    .style('fill', colors(country));
-
-  // Add the country name next to the rectangle
-  legendEntry.append('text')
-    .attr('x', 25) // Place the text 25px to the right of the rectangle
-    .attr('y', 0)
-    .attr('dy', '0.35em') // Center-align vertically
-    .text(country)
-    .style('font-size', '12px')
-    .attr('fill', colors(country));
-});
 
 svg2 = d3.select("#world-map-container")
     .append("svg")
@@ -281,7 +257,7 @@ function handleMouseOut(d, i) {
         
         updateTooltip(event.pageX, event.pageY, formattedDate, point.cases);
         updateStyle(this, "stroke-width", 3);
-    } 
+    }
     
       function handleLineMouseOut(d, i) {
         hideTooltip();
