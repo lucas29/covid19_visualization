@@ -12,12 +12,13 @@ const [INDEX_MIN, INDEX_MAX, TOOLTIP, LINE_CHART_CONTAINER, WORLD_MAP_CONTAINER]
 ];
 
 const [LINE_CHART_TITLE, WORLD_MAP_TITLE] = [
-    d3.select("body").insert("h2", ":first-child").text("Line Chart: COVID-19 Confirmed Cases"),
+    d3.select("body").insert("h2", ":first-child").text("Line Chart: COVID-19 Accumulated Confirmed Cases"),
     d3.select("body").insert("h2", ":first-child").text("World Map: COVID-19 Confirmed Cases").style('display', 'none')
 ];
 
 const COUNTRY_NAME_MAP = {
     "UNITED STATES OF AMERICA": "US",
+    "Myanmar": "Burma"
     // Add more mappings as needed
 };
 
@@ -220,23 +221,38 @@ svg2 = d3.select("#world-map-container")
     .attr("y", 25)
     .attr("text-anchor", "end")
     .text(`${MAX_VALUE} Cases~`);
-  });
+    });
   
-  function handleMouseOver(d, i) {
-    if (d.properties) {
-        var countryName = d.properties.name;
-        var cases = casesByCountryMap.get(countryName.toUpperCase());
-        if (cases) {
-            updateStyle(this, "stroke-width", 3);  // Increase the stroke-width on hover
-            updateTooltip(d3.event.pageX, d3.event.pageY, countryName, cases);
+    function handleMouseOver(event, d) {
+        // The 'd' here should now correctly refer to the datum bound to the country path.
+        //console.log(d);
+    
+        if (d.properties) {
+            var countryName = d.properties.name;
+            var cases = casesByCountryMap.get(countryName.toUpperCase());
+            console.log(cases);
+    
+            if (cases) {
+                updateStyle(event.currentTarget, "stroke-width", 3);  // Use event.currentTarget to reference the current element
+                updateTooltipForMap(event.pageX, event.pageY, countryName, cases);
+            }
         }
+    }    
+  
+    function updateTooltipForMap(pageX, pageY, country, cases) {
+        d3.select("#tooltip")
+            .style("left", pageX + 15 + "px")
+            .style("top", pageY + "px")
+            .html("<strong>Country: </strong>" + country + "<br>" +
+                "<strong>Confirmed Cases: </strong>" + cases);
+        d3.select("#tooltip").style("display", "block");
     }
-}
 
-function handleMouseOut(d, i) {
-    updateStyle(this, "stroke-width", 1);  // Reset the stroke-width on mouse out
-    hideTooltip();
-}
+    function handleMouseOut(d, i) {
+        //console.log("mouse out")
+        updateStyle(this, "stroke-width", 1);  // Reset the stroke-width on mouse out
+        hideTooltip();
+    }
 
     function updateStyle(element, styleProperty, value) {
         element.style[styleProperty] = value;
@@ -248,7 +264,7 @@ function handleMouseOut(d, i) {
             .style("top", pageY + "px")
             .html("<strong>Country: </strong>" + country + "<br>" +
                   "<strong>Date: </strong>" + date + "<br>" +  // Using 'date' instead of 'countryName' for clarity here
-                  "<strong>Confirmed Cases: </strong>" + cases);
+                  "<strong>Daily Confirmed Cases: </strong>" + cases);
         d3.select("#tooltip").style("display", "block");
     }
 
