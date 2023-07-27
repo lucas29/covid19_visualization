@@ -67,6 +67,7 @@ d3.csv("confirmed.csv").then(data => {
   }, {});
 
   const allCountries = Object.keys(dataByCountry);
+  //console.log(allCountries);
   const colors = d3.scaleOrdinal(d3.schemeCategory10).domain(allCountries);
 
   const svg = d3.select("#line-chart-container").append("svg").attr("width", WIDTH + MARGIN.left + MARGIN.right).attr("height", HEIGHT + MARGIN.top + MARGIN.bottom).append("g").attr("transform", `translate(${MARGIN.left},${MARGIN.top})`);
@@ -89,19 +90,34 @@ d3.csv("confirmed.csv").then(data => {
     })));
     
     const totalCasesByDate = d3.rollups(countryData, v => d3.sum(v, d => d.cases), d => d.date);
-  
+
     svg.append("path")
       .datum(totalCasesByDate)
       .attr("fill", "none")
       .attr("stroke", colors(country))
       .attr("stroke-width", 1.5)
+      .attr("class", "visible-line")  // Add a class for the visible line
+      .attr("data-country", country)  // Add a data attribute for the country name
+      .attr("d", d3.line()
+        .x(d => x(d[0]))
+        .y(d => y(d[1]))
+      )
+
+      svg.append("path")
+      .datum(totalCasesByDate)
+      .attr("fill", "none")
+      .attr("stroke", "transparent")
+      .attr("stroke-width", 20)  // Adjust this width to determine how close the mouse has to be to the line to trigger the tooltip.
+      .attr("class", "invisible-line")  // Add a class for the invisible line
+      .attr("data-country", country)  // Add a data attribute for the country name
       .attr("d", d3.line()
         .x(d => x(d[0]))
         .y(d => y(d[1]))
       )
       .on("mouseover", handleLineMouseOver)
-      .on("mousemove", handleLineMouseMove)
+      .on("mousemove", (event, d) => handleLineMouseMove(event, d, country))
       .on("mouseout", handleLineMouseOut);
+
   });
 
 svg2 = d3.select("#world-map-container")
@@ -223,14 +239,15 @@ function handleMouseOut(d, i) {
 }
 
     function updateStyle(element, styleProperty, value) {
-        d3.select(element).style(styleProperty, value);
+        element.style[styleProperty] = value;
     }
 
-    function updateTooltip(pageX, pageY, date, cases) {
+    function updateTooltip(pageX, pageY, date, cases, country) {
         d3.select("#tooltip")
             .style("left", pageX + 15 + "px")
             .style("top", pageY + "px")
-            .html("<strong>Date: </strong>" + date + "<br>" +  // Using 'date' instead of 'countryName' for clarity here
+            .html("<strong>Country: </strong>" + country + "<br>" +
+                  "<strong>Date: </strong>" + date + "<br>" +  // Using 'date' instead of 'countryName' for clarity here
                   "<strong>Confirmed Cases: </strong>" + cases);
         d3.select("#tooltip").style("display", "block");
     }
@@ -238,39 +255,39 @@ function handleMouseOut(d, i) {
     function hideTooltip() {
         d3.select("#tooltip").style("display", "none");
     }
-
-    function handleLineMouseOver(d, i) {
-        d3.select(this).style("cursor", "pointer");
-      }
     
-      function handleLineMouseMove(event, d) {
+      function handleLineMouseMove(event, d, country) {
         const [xPos] = d3.pointer(event, this); // Use event here, not d3.event
         const xDomain = x.invert(xPos);
         const bisect = d3.bisector(d => d.date).left;
         const index = bisect(parsedData, xDomain, 1);
-        const a = parsedData[index - 1];
-        const b = parsedData[index];
+        const a = parsedData[index - 2];
+        //console.log(a)
+        const b = parsedData[index - 1];
+        //console.log(b)
         const point = xDomain - a.date > b.date - xDomain ? b : a;
     
         // Format the date using d3.timeFormat
         const formattedDate = d3.timeFormat("%Y-%m-%d")(point.date);
         
-        updateTooltip(event.pageX, event.pageY, formattedDate, point.cases);
-        updateStyle(this, "stroke-width", 3);
+        updateTooltip(event.pageX, event.pageY, formattedDate, point.cases, country);
     }
     
-      function handleLineMouseOut(d, i) {
-        hideTooltip();
-        updateStyle(this, "stroke-width", 1)
-      }
+    function handleLineMouseOver(d, i) {
+        const country = d3.select(this).attr("data-country");
+        const visibleLine = d3.select(`.visible-line[data-country="${country}"]`);
     
-      function updateLineTooltip(pageX, pageY, date, cases) {
-        d3.select("#tooltip")
-            .style("left", pageX + 15 + "px")
-            .style("top", pageY + "px")
-            .html("<strong>Date: </strong>" + d3.timeFormat("%m/%d/%y")(date) + "<br>" +
-                  "<strong>Confirmed Cases: </strong>" + cases);
-        d3.select("#tooltip").style("display", "block");
-      }
+        visibleLine.style("cursor", "pointer");
+        visibleLine.style("stroke-width", 3);
+    }
+    
+    function handleLineMouseOut(d, i) {
+        hideTooltip();
+        
+        const country = d3.select(this).attr("data-country");
+        const visibleLine = d3.select(`.visible-line[data-country="${country}"]`);
+        
+        visibleLine.style("stroke-width", 1);
+    }
     
 });
