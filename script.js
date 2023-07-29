@@ -2,6 +2,8 @@
 const MARGIN = { top: 20, right: 20, bottom: 50, left: 70 };
 const WIDTH = 960 - MARGIN.left - MARGIN.right;
 const HEIGHT = 500 - MARGIN.top - MARGIN.bottom;
+const TARGET_DATE = "3/3/20"; // Example date. Adjust as needed.
+console.log(TARGET_DATE);
 
 const [INDEX_MIN, INDEX_MAX, TOOLTIP, LINE_CHART_CONTAINER, WORLD_MAP_CONTAINER] = [
     0, 
@@ -189,11 +191,10 @@ Object.keys(dataByCountry).forEach(country => {
 });
 }
 
-// Finally, use the functions:
 d3.csv("confirmed.csv").then(data => {
     const { parsedData, dataByCountry } = parseLineChartData(data);
     renderLineChart({ parsedData, dataByCountry });
-    processWorldMapData(data); 
+    renderWorldMap(data, TARGET_DATE);
 });
 
 function showTooltip(event, content) {
@@ -208,9 +209,11 @@ function hideTooltip() {
     d3.select("#tooltip").style("display", "none");
 }
 
-function processWorldMapData(data) {
+function renderWorldMap(data, targetDate) {
+    console.log(targetDate)
+    d3.select("#world-map-container").select("svg").remove(); // Remove any existing svg
     svg2 = d3.select("#world-map-container")
-        .append("svg")
+         .append("svg")
         .attr("width", WIDTH + MARGIN.left + MARGIN.right)
         .attr("height", HEIGHT + MARGIN.top + MARGIN.bottom)
         .style("opacity", 0);  // Ensures initial opacity is 0 for the world map
@@ -220,19 +223,19 @@ function processWorldMapData(data) {
         .translate([WIDTH / 2, HEIGHT / 1.5]);
 
     var path = d3.geoPath().projection(projection);
+    var casesByCountry = Array.from(d3.rollup(data, v => d3.sum(v, d => d[targetDate]), d => d['Country/Region']));
+    //var casesByCountry = Array.from(d3.rollup(data, v => d3.sum(v, d => d[TARGET_DATE]), d => d['Country/Region']));
 
-    const TARGET_DATE = "1/1/21"; // Example date. Adjust as needed.
-
-    // Adjust this line to aggregate based on the specified date
-    var casesByCountry = Array.from(d3.rollup(data, v => d3.sum(v, d => d[TARGET_DATE]), d => d['Country/Region']));
-
+    var casesByCountry = Array.from(d3.rollup(data, v => d3.sum(v, d => d[targetDate]), d => d['Country/Region']));
     var maxVal = d3.max(casesByCountry, function(d) { return d[1]; });
     colorScale.domain([0, maxVal]);
-
+    
     // Convert casesByCountry to a map for faster lookups and transform keys to uppercase
-    var casesByCountryMap = new Map(casesByCountry.map(d => [d[0].toUpperCase(), d[1]]));
+    var casesByCountryMap = new Map(casesByCountry.map(d => [d[0].toUpperCase(), d[1]]));    
 
-    mapDataPromise = d3.json("https://unpkg.com/world-atlas@2/countries-110m.json");
+    svg2.selectAll("path").remove();
+
+    mapDataPromise = d3.json(`https://unpkg.com/world-atlas@2/countries-110m.json?nocache=${new Date().getTime()}`);
     mapDataPromise.then(function(data) {
         svg2.selectAll("path")
         .data(topojson.feature(data, data.objects.countries).features)
@@ -346,4 +349,10 @@ function processWorldMapData(data) {
                     "<strong>Confirmed Cases: </strong>" + cases);
             d3.select("#tooltip").style("display", "block");
         }
+
+        d3.select("#dateSelector").on("change", function() {
+            const newDate = d3.select(this).property("value");
+            renderWorldMap(data, newDate);
+            svg2.transition().duration(1000).style("opacity", 1);
+        });
     }
