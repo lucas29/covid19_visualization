@@ -8,6 +8,13 @@ const sampleDate = "3/3/20";
 const parsedSampleDate = d3.timeParse("%m/%d/%y")(sampleDate);
 console.log("Sample Date:", sampleDate, "Parsed Date:", parsedSampleDate);
 
+const EVENTS = {
+    "2/1/20": "Initial Outbreak",
+    "3/15/20": "Peak of First Wave",
+    "1/1/21": "Introduction of Vaccines",
+    "6/1/21": "Emergence of New Variant"
+};
+
 const [INDEX_MIN, INDEX_MAX, TOOLTIP, LINE_CHART_CONTAINER, WORLD_MAP_CONTAINER] = [
     0, 
     1, 
@@ -43,7 +50,9 @@ const displayScene = (idx) => {
     WORLD_MAP_CONTAINER.style('display', mapDisplay);
 
     if (idx !== INDEX_MIN) {
-        svg2.transition().duration(1000).style("opacity", 1);
+        svg2.transition().duration(500).style("opacity", 1);
+        var dateSelector = document.getElementById('dateSelector');
+        dateSelector.style.opacity = '1';
     } else {
         svg2.style("opacity", 0);
     }
@@ -97,10 +106,12 @@ function renderLineChart({ parsedData, dataByCountry }) {
         .call(d3.axisBottom(x));
 
     // Add Y axis
-    var y = d3.scaleLinear()
-        .domain([0, d3.max(parsedData, function(d) { return +d.cases; })])
+    var y = d3.scaleLog()
+        .base(10)
+        .domain([1, d3.max(parsedData, function(d) { return +d.cases; })])
         .range([HEIGHT, 0]);
-    svg.append("g").call(d3.axisLeft(y));
+
+    svg.append("g").call(d3.axisLeft(y).tickFormat(d3.format(",")).tickValues([1, 10, 100, 1000, 10000, 100000, 1000000]));
 
     const allCountries = Object.keys(dataByCountry);
     const colors = d3.scaleOrdinal(d3.schemeCategory10).domain(Object.keys(dataByCountry));
@@ -117,7 +128,7 @@ Object.keys(dataByCountry).forEach(country => {
         const [key, value] = entry;
         return {
             date: d3.timeParse("%m/%d/%y")(key),
-            cases: +value
+            cases: Math.max(1, +value)  // Ensure cases are at least 1
         };
     };
     // Main processing function
@@ -205,6 +216,34 @@ Object.keys(dataByCountry).forEach(country => {
         
         visibleLine.style("stroke-width", 1);
     }
+
+    let yOffset = 65;  // Initial y offset
+    const yOffsetIncrement = 15;  // Space between each text label
+    
+    // Adding vertical lines for events
+    Object.entries(EVENTS).forEach(([dateStr, eventName]) => {
+        const eventDate = d3.timeParse("%m/%d/%y")(dateStr);
+        
+        svg.append("line")
+           .attr("x1", x(eventDate))
+           .attr("x2", x(eventDate))
+           .attr("y1", 0)
+           .attr("y2", HEIGHT)
+           .attr("stroke", "red")
+           .attr("stroke-dasharray", "2,2")
+           .attr("stroke-width", 1);
+        
+        svg.append("text")
+           .attr("x", x(eventDate) + 5)
+           .attr("y", yOffset)
+           .attr("fill", "black")
+           .text(eventName)
+           .attr("font-size", "10px")
+           .attr("text-anchor", "start");
+        
+        yOffset -= yOffsetIncrement;  // Increase y offset for next label
+    });
+    
 
 });
 }
@@ -299,10 +338,10 @@ function renderWorldMap(data, targetDate) {
         .attr("stop-color", colorScale(0))
         .attr("stop-opacity", 1);
     
-    gradient.append("stop")
+        gradient.append("stop")
         .attr("offset", "100%")
         .attr("stop-color", colorScale(maxCases))
-        .attr("stop-opacity", 1);    
+        .attr("stop-opacity", 1);
 
         const legend = svg2.append("g")
         .attr("transform", `translate(${legendMargin.left},${HEIGHT + legendMargin.top})`);
