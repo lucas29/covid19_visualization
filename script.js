@@ -4,6 +4,10 @@ const WIDTH = 960 - MARGIN.left - MARGIN.right;
 const HEIGHT = 500 - MARGIN.top - MARGIN.bottom;
 const TARGET_DATE = "3/3/20"; // Example date. Adjust as needed.
 
+const sampleDate = "3/3/20";
+const parsedSampleDate = d3.timeParse("%m/%d/%y")(sampleDate);
+console.log("Sample Date:", sampleDate, "Parsed Date:", parsedSampleDate);
+
 const [INDEX_MIN, INDEX_MAX, TOOLTIP, LINE_CHART_CONTAINER, WORLD_MAP_CONTAINER] = [
     0, 
     1, 
@@ -155,19 +159,35 @@ Object.keys(dataByCountry).forEach(country => {
 
     function handleLineMouseMove(event, d, country) {
         const [xPos] = d3.pointer(event, this); 
-        const xDomain = x.invert(xPos);
+        let xDomain = x.invert(xPos);
+    
+        // Convert xDomain to a JS Date object
+        const xDomainDate = new Date(xDomain);
+    
+        // Add three months to the date
+        xDomainDate.setMonth(xDomainDate.getMonth() - 3);
+    
+        // Convert back to the format expected by d3
+        xDomain = d3.timeParse("%Y-%m-%d")(d3.timeFormat("%Y-%m-%d")(xDomainDate));
+        
         const bisect = d3.bisector(d => d.date).left;
-        const index = bisect(parsedData, xDomain, 1);
-        const a = parsedData[index - 2];
-        const b = parsedData[index - 1];
+    
+        // Use countryData specific to the country in question
+        const countryData = dataByCountry[country].flatMap(processCountryData);
+        const index = bisect(countryData, xDomain, 1);
+        const a = countryData[index - 2];
+        const b = countryData[index - 1];
         const point = xDomain - a.date > b.date - xDomain ? b : a;
+    
+        // Adjust the logic to get daily cases by subtracting from the previous day
+        const dailyCases = point.cases - (countryData[index - 3] ? countryData[index - 3].cases : 0);
     
         const formattedDate = d3.timeFormat("%Y-%m-%d")(point.date);
         const content = `<strong>Country: </strong>${country}<br>
-                        <strong>Date: </strong>${formattedDate}<br>
-                        <strong>Daily Confirmed Cases: </strong>${point.cases}`;
+                         <strong>Date: </strong>${formattedDate}<br>
+                         <strong>Daily Confirmed Cases: </strong>${dailyCases}`;
         showTooltip(event, content);
-    }
+    }    
     
     function handleLineMouseOver(d, i) {
         const country = d3.select(this).attr("data-country");
@@ -246,9 +266,8 @@ function renderWorldMap(data, targetDate) {
         .on("mouseout", handleMouseOut); // Add mouseout event handler
 
         const MIN_VALUE = 0;
-        const MAX_VALUE = 4000000;  // You can adjust this later based on your data
         var maxCases = d3.max(casesByCountry, d => d[1]);
-        colorScale.domain([0, maxCases]);        
+        colorScale.domain([0, maxCases]);
         
         function colorFn(d) {
             let countryName = d.properties.name.toUpperCase();
