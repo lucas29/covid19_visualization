@@ -3,7 +3,6 @@ const MARGIN = { top: 20, right: 20, bottom: 50, left: 70 };
 const WIDTH = 960 - MARGIN.left - MARGIN.right;
 const HEIGHT = 500 - MARGIN.top - MARGIN.bottom;
 const TARGET_DATE = "3/3/20"; // Example date. Adjust as needed.
-console.log(TARGET_DATE);
 
 const [INDEX_MIN, INDEX_MAX, TOOLTIP, LINE_CHART_CONTAINER, WORLD_MAP_CONTAINER] = [
     0, 
@@ -21,8 +20,8 @@ const [LINE_CHART_TITLE, WORLD_MAP_TITLE] = [
 const COUNTRY_NAME_MAP = {
     "UNITED STATES OF AMERICA": "US",
     "Myanmar": "Burma",
-    "North Korea": "Korea North",
-    "South Korea": "Korea South"
+    "North Korea": "Korea, North",
+    "South Korea": "Korea, South"
     // Add more mappings as needed
 };
 
@@ -100,7 +99,6 @@ function renderLineChart({ parsedData, dataByCountry }) {
     svg.append("g").call(d3.axisLeft(y));
 
     const allCountries = Object.keys(dataByCountry);
-    //console.log(allCountries);
     const colors = d3.scaleOrdinal(d3.schemeCategory10).domain(Object.keys(dataByCountry));
 
 Object.keys(dataByCountry).forEach(country => {
@@ -210,7 +208,6 @@ function hideTooltip() {
 }
 
 function renderWorldMap(data, targetDate) {
-    console.log(targetDate)
     d3.select("#world-map-container").select("svg").remove(); // Remove any existing svg
     svg2 = d3.select("#world-map-container")
          .append("svg")
@@ -231,7 +228,7 @@ function renderWorldMap(data, targetDate) {
     colorScale.domain([0, maxVal]);
     
     // Convert casesByCountry to a map for faster lookups and transform keys to uppercase
-    var casesByCountryMap = new Map(casesByCountry.map(d => [d[0].toUpperCase(), d[1]]));    
+    var casesByCountryMap = new Map(casesByCountry.map(d => [d[0].toUpperCase(), d[1]]));
 
     svg2.selectAll("path").remove();
 
@@ -249,25 +246,21 @@ function renderWorldMap(data, targetDate) {
         .on("mouseout", handleMouseOut); // Add mouseout event handler
 
         const MIN_VALUE = 0;
-        const MAX_VALUE = 40000;  // You can adjust this later based on your data
-        colorScale.domain([MIN_VALUE, MAX_VALUE]);
+        const MAX_VALUE = 4000000;  // You can adjust this later based on your data
+        var maxCases = d3.max(casesByCountry, d => d[1]);
+        colorScale.domain([0, maxCases]);        
         
-        // In the colorFn:
         function colorFn(d) {
-            let cases;
             let countryName = d.properties.name.toUpperCase();
-            if (COUNTRY_NAME_MAP[countryName]) {
-                cases = casesByCountryMap.get(COUNTRY_NAME_MAP[countryName]);
-            } else {
-                cases = casesByCountryMap.get(countryName);
-            }
-            
+            let actualCountryName = COUNTRY_NAME_MAP[countryName] || countryName;
+            let cases = casesByCountryMap.get(actualCountryName);
+        
             if (cases === undefined) {
-                console.log(d.properties.name); // Log only if cases are undefined
+                console.log("Not found:", d.properties.name); // Log only if cases are undefined
             }
-            var color = cases == null ? "#ccc" : colorScale(cases);
-            return color;
-        }
+                
+            return cases == null ? "#ccc" : colorScale(cases);
+        }                 
 
         // Create a color legend below the world map
         const legendMargin = { top: 10, right: 20, bottom: 30, left: 20 };
@@ -286,11 +279,11 @@ function renderWorldMap(data, targetDate) {
         .attr("offset", "0%")
         .attr("stop-color", colorScale(0))
         .attr("stop-opacity", 1);
-
-        gradient.append("stop")
+    
+    gradient.append("stop")
         .attr("offset", "100%")
-        .attr("stop-color", colorScale(MAX_VALUE))
-        .attr("stop-opacity", 1);
+        .attr("stop-color", colorScale(maxCases))
+        .attr("stop-opacity", 1);    
 
         const legend = svg2.append("g")
         .attr("transform", `translate(${legendMargin.left},${HEIGHT + legendMargin.top})`);
@@ -311,7 +304,7 @@ function renderWorldMap(data, targetDate) {
         .attr("x", map_width+legendWidth)
         .attr("y", 25)
         .attr("text-anchor", "end")
-        .text(`${MAX_VALUE} Cases~`);
+        .text(`${maxCases} Cases~`);
         });
 
         // Extract the case determination for a given country feature.
@@ -322,14 +315,17 @@ function renderWorldMap(data, targetDate) {
             return casesByCountryMap.get(countryName.toUpperCase());
         }
 
-        function handleMouseOver(event, d) {
-            const cases = getCasesForCountryFeature(d);
-            if (cases) {
-                d3.select(event.currentTarget).style("stroke-width", 3);
-                const content = `<strong>Country: </strong>${d.properties.name}<br>
-                                <strong>Confirmed Cases: </strong>${cases}`;
-                showTooltip(event, content);
-            }
+        function handleMouseOver(data) {
+            var d = d3.select(data.target).datum();
+            let countryName = d.properties.name.toUpperCase();
+            let actualCountryName = COUNTRY_NAME_MAP[countryName] || countryName;
+            let cases = casesByCountryMap.get(actualCountryName);
+            
+            // Display cases in tooltip:
+            d3.select(data.currentTarget).style("stroke-width", 3);
+            let content = `<strong>Country:</strong> ${d.properties.name}<br>
+                           <strong>Confirmed Cases:</strong> ${cases ? cases.toLocaleString() : 'Data not available'}`;
+            showTooltip(data, content);
         }
         
         function handleMouseOut(event, d) {
