@@ -2,7 +2,7 @@
 const MARGIN = { top: 20, right: 20, bottom: 50, left: 70 };
 const WIDTH = 960 - MARGIN.left - MARGIN.right;
 const HEIGHT = 500 - MARGIN.top - MARGIN.bottom;
-const TARGET_DATE = "3/3/20"; // Example date. Adjust as needed.
+const TARGET_DATE = "2/1/20"; // Example date. Adjust as needed.
 
 const sampleDate = "3/3/20";
 const parsedSampleDate = d3.timeParse("%m/%d/%y")(sampleDate);
@@ -362,7 +362,7 @@ function renderWorldMap(data, targetDate) {
         .attr("x", map_width+legendWidth)
         .attr("y", 25)
         .attr("text-anchor", "end")
-        .text(`${maxCases} Cases~`);
+        .text(`${maxCases} Cases`);
         });
 
         // Extract the case determination for a given country feature.
