@@ -50,7 +50,7 @@ const displayScene = (idx) => {
     WORLD_MAP_CONTAINER.style('display', mapDisplay);
 
     if (idx !== INDEX_MIN) {
-        svg2.transition().duration(500).style("opacity", 1);
+        svg2.transition().duration(100).style("opacity", 1);
         var dateSelector = document.getElementById('dateSelector');
         dateSelector.style.opacity = '1';
     } else {
@@ -306,6 +306,7 @@ function renderWorldMap(data, targetDate) {
 
         const MIN_VALUE = 0;
         var maxCases = d3.max(casesByCountry, d => d[1])/10;
+        maxCases = parseInt(maxCases);
         colorScale.domain([0, maxCases]);
         
         function colorFn(d) {
@@ -407,6 +408,6 @@ function renderWorldMap(data, targetDate) {
         d3.select("#dateSelector").on("change", function() {
             const newDate = d3.select(this).property("value");
             renderWorldMap(data, newDate);
-            svg2.transition().duration(1000).style("opacity", 1);
+            svg2.transition().duration(100).style("opacity", 1);
         });
     }
