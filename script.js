@@ -25,7 +25,7 @@ const [INDEX_MIN, INDEX_MAX, TOOLTIP, LINE_CHART_CONTAINER, WORLD_MAP_CONTAINER]
 
 const [LINE_CHART_TITLE, WORLD_MAP_TITLE] = [
     d3.select("body").insert("h2", ":first-child").text("Line Chart: COVID-19 Accumulated Confirmed Cases"),
-    d3.select("body").insert("h2", ":first-child").text("World Map: COVID-19 Confirmed Cases").style('display', 'none')
+    d3.select("body").insert("h2", ":first-child").text("World Map: COVID-19 Confirmed Cases for ").style('display', 'none')
 ];
 
 const COUNTRY_NAME_MAP = {
@@ -305,7 +305,7 @@ function renderWorldMap(data, targetDate) {
         .on("mouseout", handleMouseOut); // Add mouseout event handler
 
         const MIN_VALUE = 0;
-        var maxCases = d3.max(casesByCountry, d => d[1]);
+        var maxCases = d3.max(casesByCountry, d => d[1])/10;
         colorScale.domain([0, maxCases]);
         
         function colorFn(d) {
@@ -317,7 +317,7 @@ function renderWorldMap(data, targetDate) {
                 console.log("Not found:", d.properties.name); // Log only if cases are undefined
             }
                 
-            return cases == null ? "#ccc" : colorScale(cases);
+            return cases == null ? "#ccc" : colorScale(cases*10);
         }                 
 
         // Create a color legend below the world map
